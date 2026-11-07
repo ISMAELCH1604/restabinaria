@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulador de resta binaria en Turing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<style>
+html { color-scheme: light dark; }
+body { margin: 0; }
+[hidden] { display: none !important; }
+
+/* Layout: una sola columna de lectura (max 1040px). Simulador primero, luego las secciones de la rúbrica en orden. Cinta con celdas cuadradas y cabezal ámbar como único acento cálido. */
+:root {
+  --bg: #F4F6F9;
+  --surface: #FFFFFF;
+  --fg: #151A22;
+  --muted: #586174;
+  --line: #D3D9E2;
+  --accent: #1D4ED8;
+  --accent-fg: #FFFFFF;
+  --head: #B45309;
+  --mark-bg: #E6ECFA;
+  --ok: #157A3B;
+  --bad: #B42318;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1218; --surface: #161B23; --fg: #E7EAF0; --muted: #9AA4B6; --line: #2A323F;
+    --accent: #7FA4FF; --accent-fg: #0E1218; --head: #F5A524; --mark-bg: #1D2943; --ok: #4ADE80; --bad: #FF8A80;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1218; --surface: #161B23; --fg: #E7EAF0; --muted: #9AA4B6; --line: #2A323F;
+  --accent: #7FA4FF; --accent-fg: #0E1218; --head: #F5A524; --mark-bg: #1D2943; --ok: #4ADE80; --bad: #FF8A80;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 64px;
+}
+.wrap { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+header h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(28px, 5vw, 44px); line-height: 1.1; margin: 8px 0 12px; text-wrap: balance; }
+header .kicker { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+header p { margin: 0; max-width: 68ch; color: var(--muted); }
+header .who { margin-top: 12px; font-family: var(--font-mono); font-size: 13px; color: var(--fg); }
+nav { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 18px; font-size: 14px; }
+nav a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; }
+nav a:hover, nav a:focus-visible { border-bottom-color: var(--accent); outline: none; }
+h2 { font-family: var(--font-display); font-weight: 600; font-size: 26px; line-height: 1.2; margin: 0 0 6px; text-wrap: balance; }
+h3 { font-size: 15px; font-weight: 600; margin: 24px 0 8px; }
+section > .lead { color: var(--muted); margin: 0 0 18px; max-width: 70ch; }
+section { min-width: 0; }
+p, li { max-width: 72ch; }
+code, .mono { font-family: var(--font-mono); font-size: .92em; }
+.formal { font-family: var(--font-mono); font-size: 14px; line-height: 1.8; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; overflow-x: auto; }
+.formal div { white-space: nowrap; }
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); max-width: 100%; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { padding: 6px 10px; border-bottom: 1px solid var(--line); text-align: center; white-space: nowrap; }
+th { font-weight: 600; background: var(--bg); position: sticky; top: 0; }
+td:first-child, th:first-child { text-align: left; font-weight: 600; position: sticky; left: 0; background: var(--surface); }
+th:first-child { background: var(--bg); }
+td.dash { color: var(--muted); }
+td.fin { color: var(--ok); font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+td.mono, th.mono { font-family: var(--font-mono); }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+.cols > * { min-width: 0; }
+dl.sym { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; font-size: 14px; }
+dl.sym dt { font-family: var(--font-mono); font-weight: 600; }
+dl.sym dd { margin: 0; color: var(--muted); }
+ol.steps { padding-left: 20px; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+ul.states { list-style: none; padding: 0; margin: 0; columns: 2 320px; column-gap: 28px; font-size: 14px; }
+ul.states li { break-inside: avoid; padding: 3px 0; max-width: none; }
+ul.states b { font-family: var(--font-mono); display: inline-block; min-width: 3.1em; }
+pre.block { font-family: var(--font-mono); font-size: 13.5px; line-height: 1.7; margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; overflow-x: auto; }
+
+/* Simulador */
+.sim { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.inputs { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field label { font-size: 12px; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+input[type="text"] { font-family: var(--font-mono); font-size: 18px; letter-spacing: .1em; padding: 8px 10px; width: 190px; max-width: 100%; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); }
+input[type="text"]:focus-visible, button:focus-visible, input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.op { font-family: var(--font-mono); font-size: 22px; padding-bottom: 6px; color: var(--muted); }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; }
+button { font-family: var(--font-body); font-size: 14px; font-weight: 500; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); }
+.presets button { font-family: var(--font-mono); font-size: 12.5px; padding: 4px 10px; }
+.speed { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.speed input { width: 130px; accent-color: var(--accent); }
+.msg { font-size: 14px; color: var(--bad); min-height: 1.3em; margin: 0; }
+.tapebox { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); padding: 10px 8px 12px; scroll-behavior: smooth; }
+.tape { display: flex; width: max-content; margin: 0 auto; }
+.cell { width: 42px; display: flex; flex-direction: column; align-items: center; flex: none; }
+.cell .hd { height: 34px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--head); line-height: 1; gap: 2px; }
+.cell .hd i { font-style: normal; font-size: 12px; }
+.cell .sy { width: 42px; height: 46px; border: 1px solid var(--line); margin-left: -1px; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 21px; font-weight: 500; background: var(--surface); }
+.cell .sy.blank { color: var(--muted); opacity: .55; font-size: 14px; }
+.cell .sy.mk { background: var(--mark-bg); color: var(--accent); }
+.cell.on .sy { border: 2px solid var(--head); z-index: 1; position: relative; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.stat span { font-size: 12px; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+.stat b { font-family: var(--font-mono); font-size: 16px; font-weight: 500; overflow-wrap: anywhere; }
+.verdict.accept { color: var(--ok); }
+.verdict.reject { color: var(--bad); }
+.log { max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); font-family: var(--font-mono); font-size: 13px; }
+.log div, .trace div { display: grid; grid-template-columns: 3.2em minmax(max-content, 1fr) max-content; gap: 12px; padding: 3px 12px; white-space: nowrap; }
+.log div.cur { background: var(--mark-bg); }
+.n { color: var(--muted); text-align: right; }
+.rule { color: var(--muted); }
+.trace { font-family: var(--font-mono); font-size: 13px; max-height: 340px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); padding: 6px 0; }
+.trace div.last { background: var(--mark-bg); }
+.video { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.video iframe, .video video { width: 100%; aspect-ratio: 16 / 9; max-width: 100%; border: 0; border-radius: 6px; background: #000; }
+.video a { color: var(--accent); }
+.note { color: var(--muted); font-size: 14px; margin: 8px 0 0; }
+.findings { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+@media (prefers-reduced-motion: reduce) { .tapebox { scroll-behavior: auto; } }
+
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <!-- <div class="kicker">Guía de proyecto final · Simulación de máquinas abstractas en entorno web</div> -->
+  <h1>Máquina de Turing que resta dos números binarios</h1>
+  <!-- <p>Una cinta, 10 estados y alfabeto de cinta Γ = {0, 1, B, □}. Recibe a B b, donde B es la letra que separa los números, y deja a − b en la cinta sin ceros a la izquierda.</ p>-->
+  <div class="who" id="who"></div>
+</header>
+<section id="simulacion">
+  <h2>Simulador</h2>
+  <p class="lead">Escribe el minuendo <b>a</b> y el sustraendo <b>b</b>. La cinta inicia con <span class="mono">a B b</span>, donde <span class="mono">B</span> es la letra que los separa y <span class="mono">□</span> es el blanco que rodea la entrada. El cabezal ámbar muestra la celda leída y el estado actual.</p>
+  <div class="sim">
+    <div class="inputs">
+      <div class="field"><label for="inA">a (minuendo)</label><input type="text" id="inA" value="101" inputmode="numeric" autocomplete="off" maxlength="12"></div>
+      <div class="op">−</div>
+      <div class="field"><label for="inB">b (sustraendo)</label><input type="text" id="inB" value="011" inputmode="numeric" autocomplete="off" maxlength="12"></div>
+      <div class="btns">
+        <button class="primary" id="bLoad">Cargar cinta</button>
+        <button id="bStep">Paso</button>
+        <button id="bRun">Ejecutar</button>
+        <button id="bReset">Reiniciar</button>
+      </div>
+    </div>
+    <div class="presets"><span>Ejemplos:</span>
+      <button data-a="1" data-b="1">1 B 1 (mínima)</button>
+      <button data-a="101" data-b="011">101 B 011 (promedio)</button>
+      <button data-a="1100" data-b="0101">1100 B 0101</button>
+      <button data-a="011" data-b="101">011 B 101 (rechazada)</button>
+    </div>
+    <p class="msg" id="msg" role="status"></p>
+    <div class="tapebox" id="tapebox"><div class="tape" id="tape"></div></div>
+    <div class="stats">
+      <div class="stat"><span>Estado</span><b id="stState">q0</b></div>
+      <div class="stat"><span>Símbolo leído</span><b id="stSym">—</b></div>
+      <div class="stat"><span>Transición aplicada</span><b id="stRule">—</b></div>
+      <div class="stat"><span>Pasos</span><b id="stSteps">0</b></div>
+      <div class="stat"><span>Resultado</span><b id="stRes" class="verdict">en espera</b></div>
+    </div>
+    <div class="speed"><label for="speed">Velocidad</label><input type="range" id="speed" min="1" max="10" value="6"><span id="speedLbl"></span></div>
+    <div>
+      <h3 style="margin-top:0">Descripciones instantáneas de esta ejecución</h3>
+      <div class="log" id="log" aria-live="off"></div>
+    </div>
+  </div>
+  <div id="videoSlot" style="margin-top:24px"></div>
+</section>
+</div>
+<script>
+
+/* ===== Datos del estudiante y del video: edita estas dos líneas ===== */
+const STUDENT = "";
+const VIDEO_URL = ""; // enlace al video (YouTube, Drive o archivo .mp4)
+
+const MACHINE = {"states": [{"name": "q0", "desc": "recorre a hasta el separador B (y vuelve aquí tras cada resta)"}, {"name": "q1", "desc": "cruza el separador y recorre b hasta su final"}, {"name": "q2", "desc": "resta 1 a b (los 0 pasan a 1, el primer 1 pasa a 0)"}, {"name": "q3", "desc": "regresa al separador B"}, {"name": "q4", "desc": "resta 1 a a; si a se acaba, rechaza (a < b)"}, {"name": "q5", "desc": "b era cero: borra los unos de b"}, {"name": "q6", "desc": "cruza el hueco en blanco hacia a"}, {"name": "q7", "desc": "recorre a hacia la izquierda"}, {"name": "q8", "desc": "quita ceros a la izquierda de a"}, {"name": "q9", "desc": "estado final, acepta"}], "final": "q9", "delta": [["q0", "0", "q0", "0", "R"], ["q0", "1", "q0", "1", "R"], ["q0", "B", "q1", "B", "R"], ["q1", "0", "q1", "0", "R"], ["q1", "1", "q1", "1", "R"], ["q1", "□", "q2", "□", "L"], ["q2", "0", "q2", "1", "L"], ["q2", "1", "q3", "0", "L"], ["q2", "B", "q5", "□", "R"], ["q3", "0", "q3", "0", "L"], ["q3", "1", "q3", "1", "L"], ["q3", "B", "q4", "B", "L"], ["q4", "0", "q4", "1", "L"], ["q4", "1", "q0", "0", "R"], ["q5", "1", "q5", "□", "R"], ["q5", "□", "q6", "□", "L"], ["q6", "□", "q6", "□", "L"], ["q6", "0", "q7", "0", "L"], ["q6", "1", "q7", "1", "L"], ["q7", "0", "q7", "0", "L"], ["q7", "1", "q7", "1", "L"], ["q7", "□", "q8", "□", "R"], ["q8", "0", "q8", "□", "R"], ["q8", "1", "q9", "1", "S"], ["q8", "□", "q9", "0", "S"]]};
+const DELTA = MACHINE.delta;
+const T = {};
+DELTA.forEach(([q, s, q2, w, m]) => { T[q + '|' + s] = [q2, w, m]; });
+const FINAL = MACHINE.final;
+const SYMS = ['0', '1', 'B', '□'];
+const STATES = MACHINE.states.map(s => s.name);
+const DESC = {};
+MACHINE.states.forEach(s => { DESC[s.name] = s.desc; });
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
+/* ===== Máquina ===== */
+function init(word) { const tape = {}; [...word].forEach((c, i) => { tape[i] = c; }); return { tape, pos: 0, q: 'q0', steps: 0, status: 'run', rule: null }; }
+function sym(st) { return st.tape[st.pos] === undefined ? '□' : st.tape[st.pos]; }
+function step(st) {
+  if (st.status !== 'run') return;
+  const s = sym(st), r = T[st.q + '|' + s];
+  if (!r) { st.status = 'reject'; st.rule = null; return; }
+  const [q2, w, m] = r;
+  st.rule = { q: st.q, s, q2, w, m };
+  if (w === '□') delete st.tape[st.pos]; else st.tape[st.pos] = w;
+  st.pos += m === 'L' ? -1 : m === 'R' ? 1 : 0;
+  st.q = q2; st.steps++;
+  if (q2 === FINAL) st.status = 'accept';
+}
+function di(st) {
+  const keys = Object.keys(st.tape).map(Number);
+  const lo = Math.min(st.pos, ...keys), hi = Math.max(st.pos, ...keys);
+  let a = '', b = '';
+  for (let i = lo; i < st.pos; i++) a += st.tape[i] === undefined ? '□' : st.tape[i];
+  for (let i = st.pos; i <= hi; i++) b += st.tape[i] === undefined ? '□' : st.tape[i];
+  return a + '(' + st.q + ')' + b;
+}
+const ruleTxt = r => r ? 'δ(' + r.q + ',' + r.s + ')=(' + r.q2 + ',' + r.w + ',' + r.m + ')' : '';
+function result(st) { return Object.keys(st.tape).map(Number).sort((a, b) => a - b).map(k => st.tape[k]).join(''); }
+function trace(word) {
+  const st = init(word), rows = [{ id: di(st), rule: '' }];
+  while (st.status === 'run' && st.steps < 5000) { step(st); rows.push({ id: di(st), rule: ruleTxt(st.rule) }); }
+  return { rows, st };
+}
+
+$('who').textContent = STUDENT;
+
+/* ===== Simulador ===== */
+let st = init('101B011'), timer = null, history = [];
+const delays = [1200, 800, 550, 380, 260, 180, 120, 70, 40, 15];
+function setMsg(t) { $('msg').textContent = t || ''; }
+function drawTape() {
+  const keys = Object.keys(st.tape).map(Number);
+  const lo = Math.min(st.pos, 0, ...keys) - 3, hi = Math.max(st.pos, ...keys) + 4;
+  let h = '';
+  for (let i = lo; i <= hi; i++) {
+    const v = st.tape[i] === undefined ? '□' : st.tape[i];
+    const cls = v === '□' ? 'blank' : '';
+    const on = i === st.pos;
+    h += '<div class="cell' + (on ? ' on' : '') + '"><div class="hd">' + (on ? esc(st.q) + '<i>▼</i>' : '') + '</div><div class="sy ' + cls + '">' + esc(v) + '</div></div>';
+  }
+  $('tape').innerHTML = h;
+  const box = $('tapebox'), c = box.querySelector('.cell.on');
+  if (c) box.scrollLeft = c.offsetLeft - box.clientWidth / 2 + 21;
+}
+function drawStats() {
+  $('stState').textContent = st.q;
+  $('stSym').textContent = sym(st);
+  $('stRule').textContent = st.rule ? ruleTxt(st.rule) : '—';
+  $('stSteps').textContent = st.steps;
+  const r = $('stRes');
+  r.className = 'verdict';
+  if (st.status === 'accept') { r.classList.add('accept'); r.textContent = 'Aceptada: ' + result(st); }
+  else if (st.status === 'reject') { r.classList.add('reject'); r.textContent = 'Rechazada'; }
+  else r.textContent = st.steps ? 'en ejecución' : 'en espera';
+  const done = st.status !== 'run';
+  $('bStep').disabled = done; $('bRun').disabled = done && !timer;
+}
+function drawLog() {
+  $('log').innerHTML = history.map((r, i) => '<div class="' + (i === history.length - 1 ? 'cur' : '') + '"><span class="n">' + i + '</span><span>' + (i ? '⊢ ' : '&nbsp;&nbsp;') + esc(r.id) + '</span><span class="rule">' + esc(r.rule) + '</span></div>').join('');
+  $('log').scrollTop = $('log').scrollHeight;
+}
+function draw() { drawTape(); drawStats(); drawLog(); }
+function stop() { if (timer) { clearTimeout(timer); timer = null; } $('bRun').textContent = 'Ejecutar'; }
+function doStep() {
+  step(st); history.push({ id: di(st), rule: ruleTxt(st.rule) });
+  if (st.status === 'reject') setMsg('No hay transición para ' + st.q + ' leyendo ' + sym(st) + ': la cadena se rechaza.');
+  draw();
+}
+function tick() {
+  if (st.status !== 'run') { stop(); drawStats(); return; }
+  doStep();
+  if (st.status === 'run') timer = setTimeout(tick, delays[$('speed').value - 1]); else stop();
+}
+function load() {
+  stop(); setMsg('');
+  const a = $('inA').value.trim(), b = $('inB').value.trim();
+  if (!/^[01]+$/.test(a) || !/^[01]+$/.test(b)) { setMsg('Escribe solo 0 y 1 en a y en b, con al menos un bit cada uno.'); return false; }
+  st = init(a + 'B' + b);
+  history = [{ id: di(st), rule: '' }];
+  draw(); return true;
+}
+$('bLoad').onclick = load;
+$('bReset').onclick = load;
+$('bStep').onclick = () => { stop(); doStep(); };
+$('bRun').onclick = () => {
+  if (timer) { stop(); return; }
+  if (st.status !== 'run') { if (!load()) return; }
+  $('bRun').textContent = 'Pausar'; timer = setTimeout(tick, 0);
+};
+$('speed').oninput = () => { $('speedLbl').textContent = $('speed').value + '/10'; };
+$('speedLbl').textContent = $('speed').value + '/10';
+document.querySelectorAll('.presets button').forEach(b => { b.onclick = () => { $('inA').value = b.dataset.a; $('inB').value = b.dataset.b; load(); }; });
+['inA', 'inB'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') load(); }));
+load();
+
+/* ===== Video ===== */
+(function () {
+  const slot = $('videoSlot');
+  let h = '';
+  const u = VIDEO_URL.trim();
+  if (!u) {
+    h += '';
+  } else {
+    const yt = u.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})/);
+    if (yt) h += '<iframe src="https://www.youtube.com/embed/' + yt[1] + '" title="Video de la presentación" allowfullscreen></iframe>';
+    else if (/\.(mp4|webm)(\?|$)/i.test(u)) h += '<video controls src="' + esc(u) + '"></video>';
+    h += '<a href="' + esc(u) + '" target="_blank" rel="noopener">Abrir el video en una pestaña nueva</a>';
+  }
+  slot.innerHTML = h + '</div>';
+})();
+
+</script>
+</body>
+</html>
